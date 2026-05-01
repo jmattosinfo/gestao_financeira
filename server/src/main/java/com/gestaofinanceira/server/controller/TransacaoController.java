@@ -2,10 +2,12 @@ package com.gestaofinanceira.server.controller;
 
 import java.util.List; // Importação da classe List para trabalhar
 import com.gestaofinanceira.server.model.Transacao;
+import com.gestaofinanceira.server.dto.SaldoDTO;
 import com.gestaofinanceira.server.repository.TransacaoRepository;
 import org.springframework.beans.factory.annotation.Autowired; // Importação da anotação Autowired para injetar a dependência do repositório de transações
 import org.springframework.web.bind.annotation.*; // Importação das anotações para criar um controlador REST, como RestController, RequestMapping, GetMapping, PostMapping, PutMapping e DeleteMapping
 
+import java.math.BigDecimal; 
 
 @RestController // o restController indica que essa classe é um controlador REST, ou seja, ela vai lidar com requisições HTTP e retornar respostas em formato JSON ou XML.
 @RequestMapping("/api/transacoes")
@@ -29,5 +31,27 @@ public class TransacaoController {
     @DeleteMapping("/{id}") // O DeleteMapping indica que esse endpoint recebe requisições DELETE para excluir uma transação específica, identificada pelo ID passado na URL.
     public void eliminar(@PathVariable Long id) {
         repository.deleteById(id);
+    }
+
+    @GetMapping("/saldo") // O GetMapping indica que esse endpoint recebe requisições GET para calcular e retornar o saldo total, despesas e receitas.
+    public SaldoDTO obterSaldo() { 
+
+      List<Transacao> todasTransacoes = repository.findAll();
+
+        BigDecimal receitas = todasTransacoes.stream()
+            .filter(t -> "RECEITA".equalsIgnoreCase(t.getTipo()))
+            .map(Transacao::getValor) //o simbolo :: é usado para referenciar o método getValor da classe Transacao
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal despesas = todasTransacoes.stream()
+            .filter(t -> "DESPESA".equalsIgnoreCase(t.getTipo()))
+            .map(Transacao::getValor)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal saldoTotal = receitas.subtract(despesas);
+
+        return new SaldoDTO(receitas, despesas, saldoTotal);
+
+
     }
 }
